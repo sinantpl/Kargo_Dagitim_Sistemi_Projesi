@@ -1,0 +1,1664 @@
+
+import javax.print.DocFlavor;
+
+
+public class city {
+    private static final double EARTH_EQUATORIAL_RADIUS=6378.1370D;
+    private static final double CONVERT_DEGREES_TO_RADIANS=Math.PI/180D;
+    private static final double CONVERT_KM_TO_MILES=0.621371;
+    private double longitude;
+    private double latitude;
+    private String name;
+    public city(String name,double latitude,double longitude){
+        this.name=name;
+        this.longitude=longitude*CONVERT_DEGREES_TO_RADIANS;
+        this.latitude=latitude*CONVERT_DEGREES_TO_RADIANS;
+    }
+    public String getname(){
+        return name;
+    }
+    public double getlatitude(){
+        return this.latitude;
+    }
+    public double getlongitude(){
+        return this.longitude;
+    }
+    public double measuredistance(city city1){
+        double deltalongitude=(city1.getlongitude()-this.getlongitude());
+        double deltalatitude=(city1.getlatitude()-this.getlatitude());
+        double a=Math.pow(Math.sin(deltalatitude/2D),2D)+ Math.cos(this.getlatitude())*Math.cos(city1.getlatitude())*Math.pow(Math.sin(deltalongitude/2D), 2D);
+        return CONVERT_KM_TO_MILES*EARTH_EQUATORIAL_RADIUS*2D*Math.atan2(Math.sqrt(a), Math.sqrt(1D-a));
+    }
+    public String toString(){
+        return this.name;
+    }
+}
+import com.mysql.jdbc.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.ResultSet;
+import java.sql.Statement;
+public class DB {
+     static Statement stat;
+    static Connection conne;
+    static String username="root";
+    static String password="1234";
+    static String DBurl="jdbc:mysql://34.69.234.59:3306/kargo";
+    public Connection getConnection() throws SQLException{
+        return(Connection) DriverManager.getConnection(DBurl, username, password);
+    }
+    public void ShowError(SQLException exception){
+        System.out.println("Error:"+exception.getMessage());
+        System.out.println("Error Code:"+exception.getErrorCode());
+    }
+    static ResultSet basla(){
+    ResultSet rs = null;
+    try{
+        conne = (Connection) DriverManager.getConnection("jdbc:mysql://34.69.234.59/kargo","root","1234");
+        stat = (Statement) conne.createStatement();
+        rs = stat.executeQuery("select * from kargo.musteri");
+    }catch(Exception e){
+        e.printStackTrace();
+    }
+        return rs;
+    }
+    static ResultSet sorgulama(String mysql_sorgusu){
+        ResultSet rs = null;
+        try{
+            rs = stat.executeQuery(mysql_sorgusu);
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
+        return rs;
+    }
+}
+
+import com.kingaspx.util.BrowserUtil;
+import com.kingaspx.version.Version;
+import com.mysql.jdbc.Connection;
+import com.teamdev.jxbrowser.chromium.Browser;
+import com.teamdev.jxbrowser.chromium.dom.By;
+import com.teamdev.jxbrowser.chromium.dom.DOMDocument;
+import com.teamdev.jxbrowser.chromium.dom.DOMElement;
+import com.teamdev.jxbrowser.chromium.dom.DOMInputElement;
+import com.teamdev.jxbrowser.chromium.events.ConsoleEvent;
+import com.teamdev.jxbrowser.chromium.events.FinishLoadingEvent;
+import com.teamdev.jxbrowser.chromium.events.LoadAdapter;
+import com.teamdev.jxbrowser.chromium.events.TitleEvent;
+import com.teamdev.jxbrowser.chromium.swing.BrowserView;
+import com.teamdev.jxbrowser.engine.Engine;
+import com.teamdev.jxbrowser.engine.EngineOptions;
+import static com.teamdev.jxbrowser.engine.RenderingMode.HARDWARE_ACCELERATED;
+
+import java.awt.BorderLayout;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+import net.proteanit.sql.DbUtils;
+
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+/**
+ *
+ * @author Sİnan
+ */
+public class deneme2 extends javax.swing.JFrame {
+    static int b;
+    
+    static String[] deneme1 = new String[2];
+    static List initialCities2 = new ArrayList<city>();
+    
+    /**
+     * Creates new form deneme2
+     */
+    static String musteriKonum;
+    public deneme2() {
+        
+        initComponents();
+        open_site();
+        TabloDoldur(kullanıcıLabel.getText());
+       // ekran2.printShortestRoute(new nearestNeighbor().findShortestRoute((ArrayList<city>) initialCities2));
+        
+    }
+    public void TabloDoldur(String musteriadi){
+        Connection connect=null;
+         DB db=new DB();
+         PreparedStatement statement =null;
+          ResultSet rs = null;
+        try {
+            connect = db.getConnection();
+            String sql="select * from kargo.musteri where musteriadi='"+musteriadi+"'";
+            statement=connect.prepareStatement(sql);
+             rs = statement.executeQuery();
+             tablo.setModel(DbUtils.resultSetToTableModel (rs));
+             connect.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(deneme2.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+    }
+     public void  KonumUpdate (String musteriadi,String lokasyonx,String lokasyony) throws SQLException{
+         Connection connect=null;
+         DB db=new DB();
+         PreparedStatement statement =null;
+         
+         try{
+         connect = db.getConnection();
+         String sql="Update kargo.musteri set musterilokasyonx='"+lokasyonx+"',musterilokasyony='"+lokasyony+"'  where musteriadi='"+musteriadi+"'";
+         
+                 
+         statement=connect.prepareStatement(sql);
+         
+         statement.executeUpdate();
+
+         }catch(SQLException exception){
+             db.ShowError(exception);
+             JOptionPane.showMessageDialog(null,"Konum Eklenemedi Güncellenemedi");
+         }finally{
+             statement.close();
+             connect.close();
+         }
+          
+    }
+     public void labelDoldur(String isim){
+         kullanıcıLabel.setText(isim);
+     }
+     
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        panel1 = new javax.swing.JPanel();
+        tablo_panel = new javax.swing.JPanel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        tablo = new javax.swing.JTable();
+        kullanıcıLabel = new javax.swing.JLabel();
+        kargoYeriButonu = new javax.swing.JButton();
+        AramaButonu = new keeptoo.KButton();
+        kGradientPanel1 = new keeptoo.KGradientPanel();
+        jTextField1 = new javax.swing.JTextField();
+        map_panel = new javax.swing.JPanel();
+        jLabel1 = new javax.swing.JLabel();
+        temizleme = new javax.swing.JButton();
+        geriButonu = new javax.swing.JButton();
+        jLabel2 = new javax.swing.JLabel();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setBackground(new java.awt.Color(204, 153, 0));
+        getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        panel1.setBackground(new java.awt.Color(223, 112, 30));
+
+        tablo.setBackground(new java.awt.Color(52, 66, 70));
+        tablo.setBorder(javax.swing.BorderFactory.createMatteBorder(1, 1, 1, 1, new java.awt.Color(0, 153, 204)));
+        tablo.setForeground(new java.awt.Color(255, 255, 255));
+        tablo.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        jScrollPane1.setViewportView(tablo);
+
+        javax.swing.GroupLayout tablo_panelLayout = new javax.swing.GroupLayout(tablo_panel);
+        tablo_panel.setLayout(tablo_panelLayout);
+        tablo_panelLayout.setHorizontalGroup(
+            tablo_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jScrollPane1)
+        );
+        tablo_panelLayout.setVerticalGroup(
+            tablo_panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 49, javax.swing.GroupLayout.PREFERRED_SIZE)
+        );
+
+        kargoYeriButonu.setBackground(new java.awt.Color(52, 66, 70));
+        kargoYeriButonu.setForeground(new java.awt.Color(255, 255, 255));
+        kargoYeriButonu.setText("Kargo Konumu Seç");
+        kargoYeriButonu.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                kargoYeriButonuActionPerformed(evt);
+            }
+        });
+
+        AramaButonu.setText("Ara");
+        AramaButonu.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 1, 24)); // NOI18N
+        AramaButonu.setkBackGroundColor(new java.awt.Color(0, 255, 0));
+        AramaButonu.setkHoverForeGround(new java.awt.Color(0, 255, 0));
+        AramaButonu.setkSelectedColor(new java.awt.Color(0, 255, 0));
+        AramaButonu.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                AramaButonuActionPerformed(evt);
+            }
+        });
+
+        kGradientPanel1.setBackground(new java.awt.Color(255, 255, 255));
+        kGradientPanel1.setkFillBackground(false);
+        kGradientPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jTextField1.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 1, 24)); // NOI18N
+        jTextField1.setBorder(null);
+        jTextField1.setOpaque(false);
+        jTextField1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jTextField1ActionPerformed(evt);
+            }
+        });
+        kGradientPanel1.add(jTextField1, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 0, 320, 60));
+
+        map_panel.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                map_panelMouseClicked(evt);
+            }
+        });
+        map_panel.setLayout(new java.awt.BorderLayout());
+        map_panel.add(jLabel1, java.awt.BorderLayout.CENTER);
+
+        temizleme.setBackground(new java.awt.Color(52, 66, 70));
+        temizleme.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 1, 24)); // NOI18N
+        temizleme.setForeground(new java.awt.Color(255, 255, 255));
+        temizleme.setText("Temizle");
+        temizleme.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                temizlemeActionPerformed(evt);
+            }
+        });
+
+        geriButonu.setBackground(new java.awt.Color(52, 66, 70));
+        geriButonu.setForeground(new java.awt.Color(255, 255, 255));
+        geriButonu.setText("Geri Dön");
+        geriButonu.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                geriButonuActionPerformed(evt);
+            }
+        });
+
+        jLabel2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/image/3.jpeg"))); // NOI18N
+
+        javax.swing.GroupLayout panel1Layout = new javax.swing.GroupLayout(panel1);
+        panel1.setLayout(panel1Layout);
+        panel1Layout.setHorizontalGroup(
+            panel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(panel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(panel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addComponent(kGradientPanel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 340, Short.MAX_VALUE)
+                        .addComponent(AramaButonu, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(temizleme, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(kargoYeriButonu, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(geriButonu, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(kullanıcıLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 222, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addGroup(panel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(panel1Layout.createSequentialGroup()
+                        .addComponent(map_panel, javax.swing.GroupLayout.PREFERRED_SIZE, 1118, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addComponent(tablo_panel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap())
+        );
+        panel1Layout.setVerticalGroup(
+            panel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panel1Layout.createSequentialGroup()
+                .addComponent(map_panel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(18, 18, 18)
+                .addComponent(tablo_panel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(42, 42, 42))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(kullanıcıLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(28, 28, 28)
+                .addComponent(kGradientPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 60, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(26, 26, 26)
+                .addComponent(AramaButonu, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addComponent(temizleme, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addComponent(kargoYeriButonu, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addComponent(geriButonu, javax.swing.GroupLayout.PREFERRED_SIZE, 49, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 105, Short.MAX_VALUE)
+                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 104, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(30, 30, 30))
+        );
+
+        getContentPane().add(panel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1500, 660));
+
+        setSize(new java.awt.Dimension(1518, 703));
+        setLocationRelativeTo(null);
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void AramaButonuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AramaButonuActionPerformed
+        // TODO add your handling code here:
+        DOMDocument dosya = browser.getDocument();
+        DOMElement lokasyon = dosya.findElement(By.id("address"));
+        DOMElement arama = dosya.findElement(By.id("submit"));
+        DOMInputElement butonumuz = (DOMInputElement) arama;
+        DOMInputElement konum = (DOMInputElement) lokasyon;
+        konum.setValue(jTextField1.getText());
+        butonumuz.click();
+        
+    }//GEN-LAST:event_AramaButonuActionPerformed
+
+    private void temizlemeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_temizlemeActionPerformed
+        // TODO add your handling code here:
+        browser.reload();
+        jTextField1.setText(null);
+    }//GEN-LAST:event_temizlemeActionPerformed
+
+    private void kargoYeriButonuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_kargoYeriButonuActionPerformed
+        
+        try {
+            
+             Connection connect=null;
+         DB db=new DB();
+         PreparedStatement statement =null;
+         
+         try{
+         connect = db.getConnection();
+         String sql="Update kargo.musteri set musteriteslimatdurumu='Teslim Edilmedi' where musteriadi='"+kullanıcıLabel.getText()+"'";
+         
+                 
+         statement=connect.prepareStatement(sql);
+         
+         statement.executeUpdate();
+
+         }catch(SQLException exception){
+             db.ShowError(exception);
+             JOptionPane.showMessageDialog(null,"Konum Eklenemedi Güncellenemedi");
+         }finally{
+             statement.close();
+             connect.close();
+         }
+            
+            TabloDoldur(kullanıcıLabel.getText());
+                 deneme1 = jTextField1.getText().split(",");
+                 String lokasyonx=deneme1[0];
+                 String lokasyony=deneme1[1];
+                      Main.ekran.initialCities.add(new city(kullanıcıLabel.getText(),Double.parseDouble(lokasyonx),Double.parseDouble(lokasyony)));
+                      Main.ekran.initialCities.addAll(Main.deneme.initialCities2);
+                      Main.ekran.printShortestRoute(new nearestNeighbor().findShortestRoute((ArrayList<city>) Main.ekran.initialCities));
+                      /*Main.deneme.initialCities2.add(new city(kullanıcıLabel.getText(),Double.parseDouble(lokasyonx),Double.parseDouble(lokasyony)));
+                      Main.ekran.initialCities.addAll(Main.deneme.initialCities2);
+                      Main.ekran.printShortestRoute(new nearestNeighbor().findShortestRoute((ArrayList<city>) Main.ekran.initialCities));*/
+                      Main.ekran.setVisible(false);
+            KonumUpdate(kullanıcıLabel.getText(),lokasyonx,lokasyony);
+            DOMDocument dosya = browser.getDocument();
+            DOMElement lokasyon = dosya.findElement(By.id("address"));
+            DOMElement arama = dosya.findElement(By.id("submit"));
+            DOMInputElement butonumuz = (DOMInputElement) arama;
+            DOMInputElement konum = (DOMInputElement) lokasyon;
+            konum.setValue(jTextField1.getText());
+            butonumuz.click();
+            
+            Main.ekran.TabloDoldur();
+            Main.ekran.Isaretle();
+            Main.ekran.setVisible(true);
+        } catch (SQLException ex) {
+            Logger.getLogger(deneme2.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        TabloDoldur(kullanıcıLabel.getText());
+                   
+    }//GEN-LAST:event_kargoYeriButonuActionPerformed
+
+    private void geriButonuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_geriButonuActionPerformed
+                    /*GirisEkrani1 menu6=new GirisEkrani1();
+                    menu6.setSize(570,600);
+                    menu6.setVisible(true);*/
+                    
+                    Main.menu3.setSize(570, 600);
+                    Main.menu3.setVisible(true);
+                    Main.deneme.setVisible(false);
+                    Main.ekran.setVisible(false);
+                    
+    }//GEN-LAST:event_geriButonuActionPerformed
+
+    private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jTextField1ActionPerformed
+
+    private void map_panelMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_map_panelMouseClicked
+        System.out.println("tıkladın");
+    }//GEN-LAST:event_map_panelMouseClicked
+    
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
+        Engine engine = Engine.newInstance(
+        EngineOptions.newBuilder(HARDWARE_ACCELERATED)
+                .licenseKey("1BNDHFSC1G0MVB5HR3MMFAGLZXW35IMQGFBHWN90FSKOIZF7VUK1N4EVE0JXFRRSLKLQN8")
+                .build());
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Windows".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(deneme2.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (InstantiationException ex) {
+            java.util.logging.Logger.getLogger(deneme2.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(deneme2.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(deneme2.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                new deneme2().setVisible(true);
+            }
+        });
+    }
+   
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private keeptoo.KButton AramaButonu;
+    private javax.swing.JButton geriButonu;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JTextField jTextField1;
+    private keeptoo.KGradientPanel kGradientPanel1;
+    private javax.swing.JButton kargoYeriButonu;
+    private javax.swing.JLabel kullanıcıLabel;
+    private javax.swing.JPanel map_panel;
+    private javax.swing.JPanel panel1;
+    private javax.swing.JTable tablo;
+    private javax.swing.JPanel tablo_panel;
+    private javax.swing.JButton temizleme;
+    // End of variables declaration//GEN-END:variables
+    Browser browser;
+    BrowserView view;
+
+    private void open_site() {
+        BrowserUtil.setVersion(Version.V6_22);
+
+        browser = new Browser();
+        view = new BrowserView(browser);
+
+        map_panel.add(view, BorderLayout.CENTER);
+        
+         browser.addTitleListener((TitleEvent evt) -> {
+            jLabel1.setText("   " + evt.getTitle());
+        });
+
+        browser.addConsoleListener((ConsoleEvent evt) -> {
+            System.out.println("LOG: " + evt.getMessage());
+        });
+
+        browser.addLoadListener(new LoadAdapter() {
+            @Override
+            public void onFinishLoadingFrame(FinishLoadingEvent evt) {
+                evt.getBrowser().setZoomLevel(-1);
+            }
+        });
+
+        browser.loadURL("C:\\Users\\Sİnan\\Desktop\\deneme\\web geliştirme\\uygulama\\kargoharita.html");
+    }}
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import com.mysql.jdbc.Connection;
+import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+import net.proteanit.sql.DbUtils;
+import sun.misc.MessageUtils;
+
+public class GirisEkrani1 extends javax.swing.JFrame {
+
+    static String ad;
+    static String sifre;
+    static String ad2;
+    public GirisEkrani1() {
+        initComponents();
+    }
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        sifreDegistir = new javax.swing.JButton();
+        girisButonu = new javax.swing.JButton();
+        kaydolbutonu1 = new javax.swing.JButton();
+        kullaniciAdi_text = new javax.swing.JTextField();
+        sifre_text = new javax.swing.JTextField();
+        jLabel7 = new javax.swing.JLabel();
+        jLabel9 = new javax.swing.JLabel();
+        jLabel1 = new javax.swing.JLabel();
+        jPanel1 = new javax.swing.JPanel();
+        jLabel2 = new javax.swing.JLabel();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        getContentPane().setLayout(null);
+
+        sifreDegistir.setBackground(new java.awt.Color(52, 66, 70));
+        sifreDegistir.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 0, 18)); // NOI18N
+        sifreDegistir.setForeground(new java.awt.Color(255, 255, 255));
+        sifreDegistir.setText("SIFREMI DEGISTIR");
+        sifreDegistir.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                sifreDegistirActionPerformed(evt);
+            }
+        });
+        getContentPane().add(sifreDegistir);
+        sifreDegistir.setBounds(140, 480, 310, 50);
+
+        girisButonu.setBackground(new java.awt.Color(0, 153, 51));
+        girisButonu.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 0, 18)); // NOI18N
+        girisButonu.setText("GIRIS YAP");
+        girisButonu.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                girisButonuActionPerformed(evt);
+            }
+        });
+        getContentPane().add(girisButonu);
+        girisButonu.setBounds(140, 260, 310, 50);
+
+        kaydolbutonu1.setBackground(new java.awt.Color(52, 66, 70));
+        kaydolbutonu1.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 0, 18)); // NOI18N
+        kaydolbutonu1.setForeground(new java.awt.Color(255, 255, 255));
+        kaydolbutonu1.setText("KAYIT OL");
+        kaydolbutonu1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                kaydolbutonu1ActionPerformed(evt);
+            }
+        });
+        getContentPane().add(kaydolbutonu1);
+        kaydolbutonu1.setBounds(140, 370, 310, 50);
+
+        kullaniciAdi_text.setToolTipText("");
+        kullaniciAdi_text.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                kullaniciAdi_textActionPerformed(evt);
+            }
+        });
+        getContentPane().add(kullaniciAdi_text);
+        kullaniciAdi_text.setBounds(150, 100, 320, 22);
+
+        sifre_text.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                sifre_textActionPerformed(evt);
+            }
+        });
+        getContentPane().add(sifre_text);
+        sifre_text.setBounds(150, 160, 320, 22);
+
+        jLabel7.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 0, 14)); // NOI18N
+        jLabel7.setText("KULLANICI ADI:");
+        getContentPane().add(jLabel7);
+        jLabel7.setBounds(20, 100, 80, 20);
+
+        jLabel9.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 0, 14)); // NOI18N
+        jLabel9.setText("SIFRE:");
+        getContentPane().add(jLabel9);
+        jLabel9.setBounds(20, 160, 90, 20);
+        getContentPane().add(jLabel1);
+        jLabel1.setBounds(0, 0, 570, 600);
+
+        jPanel1.setBackground(new java.awt.Color(223, 112, 30));
+
+        jLabel2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/image/3.jpeg"))); // NOI18N
+
+        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+        jPanel1.setLayout(jPanel1Layout);
+        jPanel1Layout.setHorizontalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                .addContainerGap(170, Short.MAX_VALUE)
+                .addComponent(jLabel2)
+                .addGap(148, 148, 148))
+        );
+        jPanel1Layout.setVerticalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                .addContainerGap(569, Short.MAX_VALUE)
+                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 118, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+
+        getContentPane().add(jPanel1);
+        jPanel1.setBounds(0, 0, 570, 700);
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void sifre_textActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_sifre_textActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_sifre_textActionPerformed
+
+    private void kullaniciAdi_textActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_kullaniciAdi_textActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_kullaniciAdi_textActionPerformed
+
+    private void sifreDegistirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_sifreDegistirActionPerformed
+        setVisible(false);
+        sifreDegistir menu2 = new sifreDegistir();
+        menu2.setSize(570, 600);
+        menu2.setVisible(true);
+    }//GEN-LAST:event_sifreDegistirActionPerformed
+static int z;
+public void girisSorgu(){
+        ad=kullaniciAdi_text.getText();
+        sifre=sifre_text.getText();
+         String sql_sorgu="select count(idmusteri) as giris from musteri where musteriadi='"+ad+"'and musterisifre='"+sifre+"'";
+
+        ResultSet rs=DB.basla();
+        rs=DB.sorgulama(sql_sorgu);
+        try {
+            while (rs.next()) {
+                if (rs.getInt("giris")==1) {
+                    GirisEkrani1.z=1;
+                }
+            }
+        } catch (SQLException ex) {            
+            Logger.getLogger(GirisEkrani1.class.getName()).log(Level.SEVERE, null, ex);
+            JOptionPane.showMessageDialog(null,"HATA!!!");
+        }
+}
+    private void girisButonuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_girisButonuActionPerformed
+      
+        Main.menu3.ad=kullaniciAdi_text.getText();
+        sifre=sifre_text.getText();
+         String sql_sorgu="select count(idmusteri) as giris from musteri where musteriadi='"+ad+"'and musterisifre='"+sifre+"'";
+
+        ResultSet rs=DB.basla();
+        rs=DB.sorgulama(sql_sorgu);
+        try {
+            while (rs.next()) {
+                if (rs.getInt("giris")==1) {
+                    
+                    Main.menu3.ad2=kullaniciAdi_text.getText();
+                    Main.deneme.TabloDoldur(ad2);
+                    Main.deneme.labelDoldur(ad2);
+                    Main.deneme.setSize(1500,700);
+                    Main.deneme.setVisible(true);
+                    Main.ekran.setVisible(true);
+                    Main.ekran.setSize(2000, 700);
+                    setVisible(false);
+                    
+                } else {
+                    JOptionPane.showMessageDialog(null,"Giris yapilamadi");
+                }
+                
+            }
+        } catch (SQLException ex) {            
+            Logger.getLogger(GirisEkrani1.class.getName()).log(Level.SEVERE, null, ex);
+            JOptionPane.showMessageDialog(null,"HATA!!!");
+        }
+    }//GEN-LAST:event_girisButonuActionPerformed
+
+    private void kaydolbutonu1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_kaydolbutonu1ActionPerformed
+        KaydolEkrani menu =new KaydolEkrani();
+        menu.setSize(570,600);
+        menu.setVisible(true);
+        setVisible(false);
+    }//GEN-LAST:event_kaydolbutonu1ActionPerformed
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            
+            public void run() {
+                
+               
+             
+            
+            }
+        });
+    }
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton girisButonu;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel9;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JButton kaydolbutonu1;
+    private javax.swing.JTextField kullaniciAdi_text;
+    private javax.swing.JButton sifreDegistir;
+    private javax.swing.JTextField sifre_text;
+    // End of variables declaration//GEN-END:variables
+}
+
+import com.mysql.jdbc.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+/**
+ *
+ * @author Sİnan
+ */
+public class KaydolEkrani extends javax.swing.JFrame {
+
+    /**
+     * Creates new form KaydolEkrani
+     */
+    public KaydolEkrani() {
+        initComponents();
+    }
+        public void  Insert () throws SQLException{
+         Connection connect=null;
+         DB db=new DB();
+         PreparedStatement statement =null;
+         
+         try{
+         connect = db.getConnection();
+         String sql="insert into kargo.musteri (musteriadi,musterisifre,musterilokasyonx,musterilokasyony,musteriteslimatdurumu)"
+                 +"values(?,?,?,?,?)";
+         statement=connect.prepareStatement(sql);
+         statement.setString(1, kullaniciAdi_text.getText());
+         statement.setString(2, sifre_text.getText());
+         statement.setString(3, "0");
+         statement.setString(4, "0");
+         statement.setString(5, "Kargo Yok");
+         statement.executeUpdate();
+         JOptionPane.showMessageDialog(null,"Kayıt Başarıyla Eklendi");
+         }catch(SQLException exception){
+             db.ShowError(exception);
+         }finally{
+             statement.close();
+             connect.close();
+         }
+         
+             
+    }
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        kaydolbutonu = new javax.swing.JButton();
+        kullaniciAdi_text = new javax.swing.JTextField();
+        sifre_text = new javax.swing.JTextField();
+        jLabel9 = new javax.swing.JLabel();
+        jLabel7 = new javax.swing.JLabel();
+        jLabel2 = new javax.swing.JLabel();
+        jLabel1 = new javax.swing.JLabel();
+        jLabel3 = new javax.swing.JLabel();
+        jPanel1 = new javax.swing.JPanel();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        getContentPane().setLayout(null);
+
+        kaydolbutonu.setBackground(new java.awt.Color(0, 153, 51));
+        kaydolbutonu.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 0, 18)); // NOI18N
+        kaydolbutonu.setText("KAYIT OL");
+        kaydolbutonu.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                kaydolbutonuActionPerformed(evt);
+            }
+        });
+        getContentPane().add(kaydolbutonu);
+        kaydolbutonu.setBounds(130, 270, 310, 50);
+
+        kullaniciAdi_text.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                kullaniciAdi_textActionPerformed(evt);
+            }
+        });
+        getContentPane().add(kullaniciAdi_text);
+        kullaniciAdi_text.setBounds(150, 100, 320, 22);
+
+        sifre_text.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                sifre_textActionPerformed(evt);
+            }
+        });
+        getContentPane().add(sifre_text);
+        sifre_text.setBounds(150, 150, 320, 22);
+
+        jLabel9.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 0, 14)); // NOI18N
+        jLabel9.setText("SIFRE:");
+        getContentPane().add(jLabel9);
+        jLabel9.setBounds(20, 160, 90, 20);
+
+        jLabel7.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 0, 14)); // NOI18N
+        jLabel7.setText("KULLANICI ADI:");
+        getContentPane().add(jLabel7);
+        jLabel7.setBounds(20, 100, 80, 20);
+
+        jLabel2.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 0, 24)); // NOI18N
+        jLabel2.setForeground(new java.awt.Color(51, 51, 51));
+        jLabel2.setText("ÜYE KAYIT FORMU");
+        getContentPane().add(jLabel2);
+        jLabel2.setBounds(190, 30, 190, 50);
+        getContentPane().add(jLabel1);
+        jLabel1.setBounds(0, 0, 570, 600);
+
+        jLabel3.setIcon(new javax.swing.ImageIcon(getClass().getResource("/image/3.jpeg"))); // NOI18N
+        getContentPane().add(jLabel3);
+        jLabel3.setBounds(167, 318, 400, 280);
+
+        jPanel1.setBackground(new java.awt.Color(223, 112, 30));
+
+        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+        jPanel1.setLayout(jPanel1Layout);
+        jPanel1Layout.setHorizontalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 570, Short.MAX_VALUE)
+        );
+        jPanel1Layout.setVerticalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 600, Short.MAX_VALUE)
+        );
+
+        getContentPane().add(jPanel1);
+        jPanel1.setBounds(0, 0, 570, 600);
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void kullaniciAdi_textActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_kullaniciAdi_textActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_kullaniciAdi_textActionPerformed
+
+    private void sifre_textActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_sifre_textActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_sifre_textActionPerformed
+
+    private void kaydolbutonuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_kaydolbutonuActionPerformed
+            try {
+            Insert();
+            GirisEkrani1 menu=new GirisEkrani1();
+            menu.setSize(570,600);
+            menu.setVisible(true);
+                setVisible(false);
+        } catch (SQLException ex) {
+            Logger.getLogger(KaydolEkrani.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_kaydolbutonuActionPerformed
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(KaydolEkrani.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (InstantiationException ex) {
+            java.util.logging.Logger.getLogger(KaydolEkrani.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(KaydolEkrani.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(KaydolEkrani.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                new KaydolEkrani().setVisible(true);
+            }
+        });
+    }
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel9;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JButton kaydolbutonu;
+    private javax.swing.JTextField kullaniciAdi_text;
+    private javax.swing.JTextField sifre_text;
+    // End of variables declaration//GEN-END:variables
+}
+
+import java.util.ArrayList;
+
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+/**
+ *
+ * @author Sİnan
+ */
+public class Main {
+    
+   static secondGui ekran = new secondGui();
+   static deneme2 deneme=new deneme2();
+   static GirisEkrani1 menu3= new GirisEkrani1();
+    public static void main(String[] args) {
+              
+                menu3.setSize(570, 750);
+                menu3.setVisible(true);
+                for (int i = 0; i <ekran.a ; i++) {
+               ekran.initialCities.add(new city(ekran.adlist3.get(i),ekran.adlist.get(i),ekran.adlist2.get(i)));
+        }
+               Main.deneme.initialCities2.addAll(ekran.initialCities);
+               ekran.printShortestRoute(new nearestNeighbor().findShortestRoute((ArrayList<city>) ekran.initialCities));
+                
+               
+    }
+}
+
+import java.util.ArrayList;
+import java.util.Arrays;
+
+
+public class nearestNeighbor {
+
+public Route findShortestRoute(ArrayList<city> cities){
+    ArrayList<city> shortestRouteCities = new ArrayList<city>(cities.size());
+    System.out.println("--------------------------------------------------------------------");
+    System.out.println("Initial Route            ==> "+ Arrays.toString(cities.toArray()));
+    System.out.println("w/ total distance: "+ new Route(cities).calculateTotalDistance());
+    System.out.println("--------------------------------------------------------------------");
+    city city2 = cities.get((int)(cities.size()*Math.random()));
+    updateRoutes(shortestRouteCities, cities, city2);
+    while(cities.size()>= 1){
+        city2 = getNextCity(cities,city2);
+        updateRoutes(shortestRouteCities, cities, city2);
+    }
+    return new Route(shortestRouteCities);
+}    
+
+    private void updateRoutes(ArrayList<city> shortestRouteCities, ArrayList<city> cities, city city2) {
+        shortestRouteCities.add(city2);
+        cities.remove(city2);
+        System.out.println("En Kısa Rota: "+ Arrays.toString(shortestRouteCities.toArray()));
+        System.out.println("Kalan Şehirler: "+ Arrays.toString(cities.toArray())+"\n");
+    }
+
+    private city getNextCity(ArrayList<city> cities, city city2) {
+        return cities.stream().min((citya,cityb) -> {
+            int flag = 0;
+            if(citya.measuredistance(city2) < cityb.measuredistance(city2)) flag = -1;
+            else if(citya.measuredistance(city2) > cityb.measuredistance(city2)) flag = 1;
+            return flag;
+        }).get();
+    }
+}
+
+import java.util.ArrayList;
+import java.util.Arrays;
+
+
+
+public class Route {
+    private ArrayList<city>cities=new ArrayList<city>();
+    public Route(ArrayList<city> cities){
+        this.cities.addAll(cities);
+    }
+    public ArrayList<city> getCities(){
+        return cities;
+    }
+    public int calculateTotalDistance(){
+        int citiesSize = this.getCities().size();
+        return (int) (this.getCities().stream().mapToDouble(x -> {
+        int cityIndex = this.getCities().indexOf(x);
+        double returnValue = 0;
+        if(cityIndex < citiesSize - 1) returnValue = x.measuredistance(this.getCities().get(cityIndex+1));
+        return returnValue;
+    }).sum()+this.getCities().get(citiesSize-1).measuredistance(this.getCities().get(0)));
+    }
+    public String toString(){
+        return Arrays.toString(cities.toArray());
+    }
+}
+
+import com.kingaspx.util.BrowserUtil;
+import com.kingaspx.version.Version;
+//import com.mysql.jdbc.Connection;
+import com.teamdev.jxbrowser.chromium.Browser;
+import com.teamdev.jxbrowser.chromium.dom.By;
+import com.teamdev.jxbrowser.chromium.dom.DOMDocument;
+import com.teamdev.jxbrowser.chromium.dom.DOMElement;
+import com.teamdev.jxbrowser.chromium.dom.DOMInputElement;
+import com.teamdev.jxbrowser.chromium.events.ConsoleEvent;
+import com.teamdev.jxbrowser.chromium.events.FinishLoadingEvent;
+import com.teamdev.jxbrowser.chromium.events.LoadAdapter;
+import com.teamdev.jxbrowser.chromium.events.TitleEvent;
+import com.teamdev.jxbrowser.chromium.swing.BrowserView;
+import com.teamdev.jxbrowser.deps.org.checkerframework.common.returnsreceiver.qual.This;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import jdk.nashorn.internal.parser.TokenType;
+import net.proteanit.sql.DbUtils;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import net.proteanit.sql.DbUtils;
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+/**
+ *
+ * @author Sİnan
+ */
+public class secondGui extends javax.swing.JFrame {
+
+    static int a;
+    
+     static ArrayList<Double> adlist = new ArrayList<>();
+     static ArrayList<Double> adlist2 = new ArrayList<>();
+     static ArrayList<String> adlist3 = new ArrayList<>();
+     public void deneme() {
+        
+        
+        try {
+
+            Connection conn = null;
+
+            Statement st = null;
+
+            ResultSet rs = null;
+
+            Class.forName("com.mysql.jdbc.Driver").newInstance();
+
+            String dbUrl = "jdbc:mysql://34.69.234.59:3306/kargo";
+
+             conn = DriverManager.getConnection(dbUrl, "root", "1234");
+
+            st = conn.createStatement();
+
+            rs = st.executeQuery("SELECT musterilokasyonx FROM kargo.musteri where musteriteslimatdurumu='Teslim Edilmedi'");
+            
+            
+
+            while(rs.next()){
+
+               adlist.add(rs.getDouble("musterilokasyonx"));
+
+            }
+            
+            
+                } catch (InstantiationException ex) {
+
+                  System.out.println(ex.getMessage());
+
+                } catch (SQLException ex) {
+            Logger.getLogger(secondGui.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(secondGui.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            Logger.getLogger(secondGui.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+   public void deneme2() {
+        
+        
+        try {
+
+            Connection conn = null;
+
+            Statement st = null;
+            
+            ResultSet rs2 = null;
+
+            Class.forName("com.mysql.jdbc.Driver").newInstance();
+
+            String dbUrl = "jdbc:mysql://34.69.234.59:3306/kargo";
+
+             conn = DriverManager.getConnection(dbUrl, "root", "1234");
+
+            st = conn.createStatement();
+
+            rs2 = st.executeQuery("SELECT musterilokasyony FROM kargo.musteri where musteriteslimatdurumu='Teslim Edilmedi'");
+            
+            
+
+            while(rs2.next()){
+
+               adlist2.add(rs2.getDouble("musterilokasyony"));
+
+            }
+            
+            
+                } catch (InstantiationException ex) {
+
+                  System.out.println(ex.getMessage());
+
+                } catch (SQLException ex) {
+            Logger.getLogger(secondGui.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(secondGui.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            Logger.getLogger(secondGui.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+   public void deneme3(){
+        try {
+
+            Connection conn = null;
+
+            Statement st = null;
+
+            ResultSet rs3 = null;
+
+            Class.forName("com.mysql.jdbc.Driver").newInstance();
+
+            String dbUrl = "jdbc:mysql://34.69.234.59:3306/kargo";
+
+            conn = DriverManager.getConnection(dbUrl, "root", "1234");
+
+            st = conn.createStatement();
+
+            rs3 = st.executeQuery("SELECT musteriadi FROM kargo.musteri where musteriteslimatdurumu='Teslim Edilmedi' ");
+
+            
+
+            while(rs3.next()){
+
+               adlist3.add(rs3.getString("musteriadi"));
+
+            }
+
+
+                } catch (InstantiationException ex) {
+
+                  System.out.println(ex.getMessage());
+
+                } catch (SQLException ex) {
+            Logger.getLogger(secondGui.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(secondGui.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            Logger.getLogger(secondGui.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+     static List initialCities = new ArrayList<city>();
+    public secondGui() {
+        initComponents();
+        deneme();
+        deneme2(); 
+        deneme3(); 
+        open_site();
+        TabloDoldur();
+        Isaretle();        
+       
+    }
+    
+        
+        public void TabloDoldur(){
+     
+        Connection connect=null;
+         DB db=new DB();
+         PreparedStatement statement =null;
+          ResultSet rs = null;
+        try {
+            
+            connect = db.getConnection();
+            String sql="select * from kargo.musteri where musteriteslimatdurumu='Teslim Edilmedi'";
+            statement=connect.prepareStatement(sql);
+             rs = statement.executeQuery();
+             gizliTablo.setModel(DbUtils.resultSetToTableModel (rs));
+             connect.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(deneme2.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+    }
+        
+        public void Isaretle(){
+            TabloDoldur();
+            Connection connect=null;
+         DB db=new DB();
+         PreparedStatement statement =null;
+          ResultSet rs = null;
+        try {
+            connect = db.getConnection();
+            String sql="SELECT COUNT(idmusteri) FROM kargo.musteri where musteriteslimatdurumu='Teslim Edilmedi'";
+            statement=connect.prepareStatement(sql);
+             rs = statement.executeQuery();
+             while(rs.next()) {
+            a= rs.getInt("COUNT(idmusteri)");
+            System.out.println(a);
+            
+         }
+             
+             connect.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(secondGui.class.getName()).log(Level.SEVERE, null, ex);
+        }
+            DOMDocument dosya = browser.getDocument();
+         DOMElement lokasyon = dosya.findElement(By.id("address"));
+         DOMElement arama = dosya.findElement(By.id("submit"));
+         DOMInputElement butonumuz = (DOMInputElement) arama;
+         DOMInputElement konum = (DOMInputElement) lokasyon;
+            for (int i = 0; i < a; i++) {
+                TabloDoldur();
+                konum.setValue(gizliTablo.getValueAt(i,3)+","+gizliTablo.getValueAt(i, 4));
+                butonumuz.click(); 
+                
+            }
+          
+        }
+      
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        mapPanel = new javax.swing.JPanel();
+        jLabel1 = new javax.swing.JLabel();
+        jPanel1 = new javax.swing.JPanel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        gizliTablo = new javax.swing.JTable();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        yazi = new javax.swing.JTextArea();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        mapPanel.setLayout(new java.awt.BorderLayout());
+        mapPanel.add(jLabel1, java.awt.BorderLayout.CENTER);
+
+        getContentPane().add(mapPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1150, 700));
+
+        jPanel1.setLayout(new java.awt.BorderLayout());
+
+        gizliTablo.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        jScrollPane1.setViewportView(gizliTablo);
+
+        jPanel1.add(jScrollPane1, java.awt.BorderLayout.CENTER);
+
+        getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 850, 390));
+
+        yazi.setBackground(new java.awt.Color(223, 112, 30));
+        yazi.setColumns(20);
+        yazi.setRows(5);
+        yazi.setPreferredSize(null);
+        jScrollPane2.setViewportView(yazi);
+
+        getContentPane().add(jScrollPane2, new org.netbeans.lib.awtextra.AbsoluteConstraints(1156, 0, 500, 700));
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(secondGui.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (InstantiationException ex) {
+            java.util.logging.Logger.getLogger(secondGui.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(secondGui.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(secondGui.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                
+               
+            }
+        });
+    }
+    
+    public void printShortestRoute(Route shortestRoute){
+        System.out.println("------------------------------------------------------------------");
+        System.out.println("En kısa yol: "+ shortestRoute);
+        System.out.println("w/ total distance: "+ shortestRoute.calculateTotalDistance());
+        System.out.println("------------------------------------------------------------------"); 
+        yazi.setText("\n--------------------------------------------------------------------------------------\n"+
+                "En kısa yol: "+shortestRoute+"\nRota Toplam: "+ shortestRoute.calculateTotalDistance()+
+                "\n--------------------------------------------------------------------------------------\n");
+    }
+    
+    
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JTable gizliTablo;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JPanel mapPanel;
+    private javax.swing.JTextArea yazi;
+    // End of variables declaration//GEN-END:variables
+     Browser browser;
+    BrowserView view;
+
+    public void open_site() {
+        BrowserUtil.setVersion(Version.V6_22);
+
+        browser = new Browser();
+        view = new BrowserView(browser);
+
+        mapPanel.add(view, BorderLayout.CENTER);
+        
+         browser.addTitleListener((TitleEvent evt) -> {
+            jLabel1.setText("   " + evt.getTitle());
+        });
+
+        browser.addConsoleListener((ConsoleEvent evt) -> {
+            System.out.println("LOG: " + evt.getMessage());
+        });
+
+        browser.addLoadListener(new LoadAdapter() {
+            @Override
+            public void onFinishLoadingFrame(FinishLoadingEvent evt) {
+                evt.getBrowser().setZoomLevel(-1);
+            }
+        });
+
+        browser.loadURL("C:\\Users\\Sİnan\\Desktop\\deneme\\web geliştirme\\uygulama\\kargoharita.html");
+    }
+    
+
+        
+        
+                
+    
+}
+
+import com.mysql.jdbc.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+/**
+ *
+ * @author Sİnan
+ */
+public class sifreDegistir extends javax.swing.JFrame {
+
+    /**
+     * Creates new form sifreDegistir
+     */
+    public sifreDegistir() {
+        initComponents();
+    }
+    public void  SifreDegistir (String musteriadi, String sifre) throws SQLException{
+         Connection connect=null;
+         DB db=new DB();
+         PreparedStatement statement =null;
+         
+         try{
+         connect = db.getConnection();
+         String sql="Update musteri set musterisifre='"+sifre+"' where musteriadi='"+musteriadi+"'";
+         statement=connect.prepareStatement(sql);
+         statement.executeUpdate();
+         JOptionPane.showMessageDialog(null,"Sifre Degistirildi");
+         }catch(SQLException exception){
+             db.ShowError(exception);
+             JOptionPane.showMessageDialog(null,"Sifre Degistirilemedi");
+         }finally{
+             statement.close();
+             connect.close();
+         }
+      
+    }
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        kullaniciAdi_text1 = new javax.swing.JTextField();
+        jLabel7 = new javax.swing.JLabel();
+        sifreDegistir = new javax.swing.JButton();
+        sifre_text = new javax.swing.JTextField();
+        jLabel9 = new javax.swing.JLabel();
+        jLabel1 = new javax.swing.JLabel();
+        jLabel2 = new javax.swing.JLabel();
+        jPanel1 = new javax.swing.JPanel();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        getContentPane().setLayout(null);
+
+        kullaniciAdi_text1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                kullaniciAdi_text1ActionPerformed(evt);
+            }
+        });
+        getContentPane().add(kullaniciAdi_text1);
+        kullaniciAdi_text1.setBounds(140, 60, 320, 22);
+
+        jLabel7.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 0, 14)); // NOI18N
+        jLabel7.setText("KULLANICI ADI:");
+        getContentPane().add(jLabel7);
+        jLabel7.setBounds(40, 60, 80, 20);
+
+        sifreDegistir.setBackground(new java.awt.Color(0, 153, 51));
+        sifreDegistir.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 0, 18)); // NOI18N
+        sifreDegistir.setText("SIFREMI DEGISTIR");
+        sifreDegistir.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                sifreDegistirActionPerformed(evt);
+            }
+        });
+        getContentPane().add(sifreDegistir);
+        sifreDegistir.setBounds(120, 210, 310, 50);
+
+        sifre_text.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                sifre_textActionPerformed(evt);
+            }
+        });
+        getContentPane().add(sifre_text);
+        sifre_text.setBounds(140, 130, 320, 22);
+
+        jLabel9.setFont(new java.awt.Font("Tw Cen MT Condensed Extra Bold", 0, 14)); // NOI18N
+        jLabel9.setText("YENI SIFRE:");
+        getContentPane().add(jLabel9);
+        jLabel9.setBounds(40, 130, 90, 20);
+        getContentPane().add(jLabel1);
+        jLabel1.setBounds(0, 0, 570, 600);
+
+        jLabel2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/image/3.jpeg"))); // NOI18N
+        getContentPane().add(jLabel2);
+        jLabel2.setBounds(171, 290, 310, 200);
+
+        jPanel1.setBackground(new java.awt.Color(223, 112, 30));
+
+        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+        jPanel1.setLayout(jPanel1Layout);
+        jPanel1Layout.setHorizontalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 570, Short.MAX_VALUE)
+        );
+        jPanel1Layout.setVerticalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 600, Short.MAX_VALUE)
+        );
+
+        getContentPane().add(jPanel1);
+        jPanel1.setBounds(0, 0, 570, 600);
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void sifre_textActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_sifre_textActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_sifre_textActionPerformed
+
+    private void sifreDegistirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_sifreDegistirActionPerformed
+        try {
+            SifreDegistir(kullaniciAdi_text1.getText(), sifre_text.getText());
+            Main.menu3.setSize(570, 750);
+            Main.menu3.setVisible(true);
+            setVisible(false);
+        } catch (SQLException ex) {
+            Logger.getLogger(sifreDegistir.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_sifreDegistirActionPerformed
+
+    private void kullaniciAdi_text1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_kullaniciAdi_text1ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_kullaniciAdi_text1ActionPerformed
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(sifreDegistir.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (InstantiationException ex) {
+            java.util.logging.Logger.getLogger(sifreDegistir.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(sifreDegistir.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(sifreDegistir.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                new sifreDegistir().setVisible(true);
+            }
+        });
+    }
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel9;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JTextField kullaniciAdi_text1;
+    private javax.swing.JButton sifreDegistir;
+    private javax.swing.JTextField sifre_text;
+    // End of variables declaration//GEN-END:variables
+}
